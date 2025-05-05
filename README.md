@@ -2,6 +2,10 @@
 
 Roku TV Control is a web-based application designed to discover and control TCL Roku TVs on your local network. Built with Flask (Python) for the backend and HTML/JavaScript with Tailwind CSS for the frontend, it offers a user-friendly interface to send remote control commands, discover devices via SSDP or HTTP scanning, and manage network settings. The application supports both local and Docker deployments, ensuring flexibility and ease of use.
 
+<div align="center">
+  <img src="./screenshot/tcl_pilot.png" width="250" style="display: block; margin: 0 auto" >
+</div>
+
 ## Features
 
 ### Device Discovery
