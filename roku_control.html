@@ -7,6 +7,11 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1F2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -53,7 +58,7 @@
                 <option value="10.0.3.0">10.0.3.0</option>
                 <option value="192.168.1.0">192.168.1.0</option>
                 <option value="192.168.0.0">192.168.0.0</option>
-                <option value="172.16.0.0">172.16.0.0</option>
+                <option value="172.16.0.0">172.16.0-sided
             </select>
             <input type="text" id="subnetInput" placeholder="e.g., 10.0.4.0" class="border border-gray-300/20 bg-gray-700 text-white p-2 w-full rounded-md text-center mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
             <select id="ipAddress" class="border border-gray-300/20 bg-gray-700 text-white p-2 w-full rounded-md text-center mb-3 hidden focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -91,6 +96,19 @@
     <script>
         let rokuIP = '';
         let settingsVisible = true;
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
 
         function toggleSettings() {
             settingsVisible = !settingsVisible;
@@ -130,17 +148,24 @@
                 setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                 return;
             }
-            const url = `http://${rokuIP}:8060/keypress/${key}`;
-            fetch(url, { method: 'POST' })
+            fetch('/keypress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip: rokuIP, key: key })
+            })
                 .then(response => {
-                    if (response.ok) {
-                        document.getElementById('status').textContent = `Sent ${key} to Roku TV`;
-                        document.getElementById('status').classList.add('fade-in');
-                        setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error: status ${response.status}`);
                     }
+                    document.getElementById('status').textContent = `Sent ${key} to Roku TV`;
+                    document.getElementById('status').classList.add('fade-in');
+                    setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                 })
                 .catch(error => {
                     console.error(`Error sending ${key}:`, error);
+                    document.getElementById('status').textContent = `Error sending ${key}: ${error.message}`;
+                    document.getElementById('status').classList.add('fade-in');
+                    setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                 });
         }
 

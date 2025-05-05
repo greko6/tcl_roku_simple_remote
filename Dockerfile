@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY server.py .
 COPY roku_control.html .
+COPY manifest.json .
+COPY service-worker.js .
+COPY icons/ ./icons/
 
 # Expose port 5050
 EXPOSE 5050

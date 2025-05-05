@@ -1,12 +1,24 @@
 # Roku TV Control
 
-Roku TV Control is a web-based application designed to discover and control TCL Roku TVs on your local network. Built with Flask (Python) for the backend and HTML/JavaScript with Tailwind CSS for the frontend, it offers a user-friendly interface to send remote control commands, discover devices via SSDP or HTTP scanning, and manage network settings. The application supports both local and Docker deployments, ensuring flexibility and ease of use.
+## Overview
+Roku TV Control is a web-based application designed to control TCL Roku TVs on your local network. It features a modern, visually appealing interface with icon-based controls, a settings panel for network configuration, and support for both mouse and keyboard inputs. The application supports Progressive Web App (PWA) installation on iOS, Android, and Chrome browsers, enabling a native-like experience. It uses SSDP and HTTP for device discovery and communicates with the TV via HTTP, with backend handling to ensure HTTPS compatibility for secure deployments.
 
 <div align="center">
   <img src="./screenshot/tcl_pilot.png" width="250" style="display: block; margin: 0 auto" >
 </div>
 
+
 ## Features
+- **Intuitive Interface**: A sleek, dark-themed UI with glassmorphism containers, neumorphic buttons, and smooth animations (fade-in, hover scaling, side panel slide).
+- **Remote Control**: Control your TCL Roku TV with icon buttons (Home, Back, Up, Down, Play, Volume, Power, etc.) featuring tooltips for accessibility.
+- **Keyboard Support**: Use `Arrow keys` for navigation, `Enter` for selection, `=` for Volume Up, `-` for Volume Down, and `Backspace` for Back.
+- **Device Discovery**: Automatically discover TCL Roku TVs on the network using SSDP or HTTP scanning, with manual IP entry option.
+- **Settings Panel**: Configure subnet and IP via an expandable side panel (toggled via hamburger icon), with status updates.
+- **Progressive Web App (PWA)**: Install as a native-like app on iOS, Android, and Chrome browsers, with offline UI access (control requires network).
+- **HTTPS Compatibility**: Frontend communicates over HTTPS, with backend handling HTTP requests to the TV, avoiding mixed content issues.
+- **Docker Support**: Run the application in a Docker container with `--network host` for SSDP discovery.
+- **Responsive Design**: Adapts to mobile and desktop screens, with a collapsible settings panel for smaller devices.
+
 
 ### Device Discovery
 - **SSDP Discovery**: Automatically detects TCL Roku TVs on the network using SSDP (Simple Service Discovery Protocol) multicast, binding to the internet-facing network interface for reliable discovery.
@@ -104,6 +116,16 @@ Roku TV Control is a web-based application designed to discover and control TCL 
    - Use the “Change Subnet” button to scan a different subnet if needed.
 6. **Status Feedback**:
    - Monitor the status area for messages about discovery success, errors, or control actions.
+7. **Install as PWA** (Note: SSL cert required, use reverse proxy):
+   - **Chrome (Desktop/Android)**:
+     - Open the app in Chrome.
+     - Click the “+” icon in the address bar or the “Install” prompt.
+     - Choose “Install” to add to desktop or home screen.
+   - **iOS Safari**:
+     - Open the app in Safari.
+     - Tap the “Share” icon.
+     - Select “Add to Home Screen” and confirm.
+   - The app appears as “Roku Control” with the custom icon, launching in standalone mode.
 
 ## File Structure
 - `server.py`: Flask backend handling SSDP and HTTP discovery, serving the frontend.

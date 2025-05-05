@@ -1,152 +1,171 @@
-from flask import Flask, send_file, jsonify, request
+from flask import Flask, request, jsonify, send_from_directory
+import netifaces
 import socket
 import time
+import threading
 import requests
-import logging
-import netifaces
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-discovered_devices = []
+# Store discovered devices
+devices = []
 
-def get_default_interface_ip():
+def get_default_interface():
+    gateways = netifaces.gateways()
+    default_gateway = gateways.get('default')
+    if default_gateway and netifaces.AF_INET in default_gateway:
+        interface = default_gateway[netifaces.AF_INET][1]
+        return interface
+    return None
+
+def get_interface_ip(interface):
     try:
-        gateways = netifaces.gateways()
-        default_gateway = gateways.get('default', {}).get(netifaces.AF_INET)
-        if not default_gateway:
-            logger.warning("No default gateway found, falling back to 0.0.0.0")
-            return '0.0.0.0'
-        
-        interface = default_gateway[1]
-        addrs = netifaces.ifaddresses(interface).get(netifaces.AF_INET, [])
-        if not addrs:
-            logger.warning(f"No IPv4 address found for interface {interface}, falling back to 0.0.0.0")
-            return '0.0.0.0'
-        
-        interface_ip = addrs[0]['addr']
-        logger.info(f"Using interface {interface} with IP {interface_ip}")
-        return interface_ip
+        addrs = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addrs:
+            for addr in addrs[netifaces.AF_INET]:
+                return addr['addr']
     except Exception as e:
-        logger.error(f"Error detecting default interface: {e}, falling back to 0.0.0.0")
-        return '0.0.0.0'
+        print(f"Error getting IP for interface {interface}: {e}")
+    return None
 
-@app.route('/')
-def serve_html():
-    return send_file('roku_control.html')
-
-@app.route('/discover', methods=['POST'])
-def discover_roku():
-    global discovered_devices
-    subnet = request.json.get('subnet', '10.0.3.0')
-    logger.info(f"Starting discovery process for subnet {subnet}")
-    devices = discover_ssdp()
-    
-    if not devices:
-        logger.warning("SSDP found no devices, falling back to HTTP scanning")
-        devices = discover_http(subnet)
-    
-    discovered_devices = devices
-    logger.info(f"Discovery complete, found {len(devices)} devices: {[device['ip'] for device in devices]}")
-    return jsonify(devices)
-
-@app.route('/devices')
-def get_devices():
-    return jsonify(discovered_devices)
-
-def discover_ssdp():
+def ssdp_discover(timeout=5):
+    global devices
     MSEARCH = (
         'M-SEARCH * HTTP/1.1\r\n'
         'HOST: 239.255.255.250:1900\r\n'
         'MAN: "ssdp:discover"\r\n'
         'MX: 3\r\n'
-        'ST: urn:roku-com:device:player:1-0\r\n'
+        'ST: roku:ecp\r\n'
         '\r\n'
     ).encode('utf-8')
+    MULTICAST_ADDRESS = '239.255.255.250'
+    PORT = 1900
 
-    devices = []
-    interface_ip = get_default_interface_ip()
-    max_retries = 1
+    interface = get_default_interface()
+    if not interface:
+        return []
 
-    for attempt in range(max_retries):
-        sock = None
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-            
+    local_ip = get_interface_ip(interface)
+    if not local_ip:
+        return []
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    sock.settimeout(timeout)
+
+    try:
+        sock.bind((local_ip, 0))
+        sock.sendto(MSEARCH, (MULTICAST_ADDRESS, PORT))
+        start_time = time.time()
+        temp_devices = []
+        while time.time() - start_time < timeout:
             try:
-                sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, 
-                               socket.inet_aton('239.255.255.250') + socket.inet_aton(interface_ip))
-                sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface_ip))
-            except socket.error as e:
-                logger.error(f"Failed to configure multicast on attempt {attempt + 1}: {e}")
-                continue
-            
-            sock.settimeout(6)
-            sock.bind((interface_ip, 0))
+                data, addr = sock.recvfrom(1024)
+                response = data.decode('utf-8')
+                if 'roku:ecp' in response:
+                    for line in response.split('\n'):
+                        if line.startswith('LOCATION:'):
+                            location = line.split(':', 1)[1].strip()
+                            try:
+                                device_info = requests.get(location, timeout=3).text
+                                root = ET.fromstring(device_info)
+                                friendly_name = root.find('.//{urn:schemas-upnp-org:device-1-0}friendlyName').text
+                                temp_devices.append({
+                                    'ip': addr[0],
+                                    'name': f"TCL Roku TV ({addr[0]})"
+                                })
+                            except Exception as e:
+                                print(f"Error parsing device at {location}: {e}")
+            except socket.timeout:
+                break
+            except Exception as e:
+                print(f"SSDP error: {e}")
+        devices = temp_devices
+        return devices
+    finally:
+        sock.close()
 
-            logger.debug(f"Sending SSDP M-SEARCH (attempt {attempt + 1}) on interface {interface_ip}")
-            sock.sendto(MSEARCH, ('239.255.255.250', 1900))
-
-            start_time = time.time()
-            while time.time() - start_time < 6:
-                try:
-                    data, addr = sock.recvfrom(1024)
-                    response = data.decode('utf-8', errors='ignore').lower()
-                    logger.debug(f"Received SSDP response from {addr[0]}: {response[:100]}...")
-                    
-                    if 'roku' in response or 'tcl' in response:
-                        ip = addr[0]
-                        devices.append({'ip': ip, 'name': f'TCL Roku TV ({ip})'})
-                except socket.timeout:
-                    logger.debug("SSDP timeout reached")
-                    break
-                except Exception as e:
-                    logger.error(f"Error processing SSDP response: {e}")
-        except socket.error as e:
-            logger.error(f"Socket error on attempt {attempt + 1}: {e}")
-            if 'Address already in use' in str(e):
-                logger.warning("Port conflict detected. Retrying with a different port.")
-        finally:
-            if sock:
-                sock.close()
-        if devices:
-            break
-
-    seen_ips = set()
-    unique_devices = [d for d in devices if not (d['ip'] in seen_ips or seen_ips.add(d['ip']))]
-    return unique_devices
-
-def discover_http(subnet):
-    logger.info(f"Starting HTTP scanning for subnet {subnet}")
-    start_time = time.time()
-    subnet_base = subnet.rsplit('.', 1)[0]
-    devices = []
-
-    def check_ip(i):
-        ip = f'{subnet_base}.{i}'
-        try:
-            logger.debug(f"Checking {ip}")
-            response = requests.get(f'http://{ip}:8060/query/device-info', timeout=0.5)
-            if response.status_code == 200 and 'TCL' in response.text:
-                logger.info(f"Found TCL Roku TV at {ip}")
-                return {'ip': ip, 'name': f'TCL Roku TV ({ip})'}
-        except requests.RequestException:
-            pass
-        return None
-
-    with ThreadPoolExecutor(max_workers=40) as executor:
-        results = executor.map(check_ip, range(1, 256))
-        devices = [result for result in results if result is not None]
-
-    scan_duration = time.time() - start_time
-    logger.info(f"HTTP scan completed in {scan_duration:.2f} seconds")
+def http_scan(subnet):
+    global devices
+    base_ip = subnet.rsplit('.', 1)[0]
+    temp_devices = []
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = []
+        for i in range(1, 256):
+            ip = f"{base_ip}.{i}"
+            futures.append(executor.submit(check_device, ip))
+        for future in futures:
+            result = future.result()
+            if result:
+                temp_devices.append(result)
+    devices = temp_devices
     return devices
+
+def check_device(ip):
+    try:
+        response = requests.get(f"http://{ip}:8060/query/device-info", timeout=2)
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            friendly_name = root.find('user-device-name').text or root.find('default-device-name').text
+            return {'ip': ip, 'name': f"TCL Roku TV ({ip})"}
+    except Exception:
+        pass
+    return None
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'roku_control.html')
+
+@app.route('/discover', methods=['POST'])
+def discover():
+    global devices
+    data = request.get_json()
+    subnet = data.get('subnet')
+    if not subnet:
+        return jsonify({'error': 'Subnet is required'}), 400
+    try:
+        devices = ssdp_discover()
+        if not devices:
+            devices = http_scan(subnet)
+        return jsonify(devices)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/devices')
+def get_devices():
+    return jsonify(devices)
+
+@app.route('/keypress', methods=['POST'])
+def keypress():
+    data = request.get_json()
+    ip = data.get('ip')
+    key = data.get('key')
+    if not ip or not key:
+        return jsonify({'error': 'IP and key are required'}), 400
+    try:
+        response = requests.post(f"http://{ip}:8060/keypress/{key}", timeout=5)
+        if response.status_code == 200:
+            return jsonify({'status': 'success'})
+        else:
+            return jsonify({'error': f"Failed to send keypress: status {response.status_code}"}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('.', 'manifest.json')
+
+@app.route('/service-worker.js')
+def serve_sw():
+    return send_from_directory('.', 'service-worker.js')
+
+@app.route('/icons/<path:filename>')
+def serve_icons(filename):
+    return send_from_directory('icons', filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
+    
