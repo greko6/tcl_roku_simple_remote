@@ -55,7 +55,7 @@ Roku TV Control is a web-based application designed to discover and control TCL 
 ### Local Setup
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/greko6/tcl_roku_simple_remote.git
    cd roku-tv-control
    ```
 2. Install dependencies:
