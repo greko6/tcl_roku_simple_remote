@@ -5,52 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roku TV Control</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .neumorphic-btn {
+            background: #374151;
+            box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3), -4px -4px 8px rgba(255, 255, 255, 0.1);
+        }
+        .pulse:hover {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <button id="settingsToggle" class="fixed top-4 right-4 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 focus:outline-none z-50" title="Toggle Settings">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
+<body class="bg-gradient-to-br from-gray-800 to-gray-900 min-h-screen flex items-center justify-center animate-fade-in">
+    <button id="settingsToggle" class="fixed top-4 right-4 bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 focus:outline-none z-50 pulse" title="Toggle Settings" aria-label="Toggle Settings">
+        <i class="fas fa-bars fa-lg"></i>
     </button>
-    <div id="settings-panel" class="fixed top-0 right-0 h-full bg-white shadow-lg z-40 transition-all duration-300 w-64 overflow-y-auto">
-        <div class="p-4">
-            <h2 class="text-lg font-semibold mb-4">Settings</h2>
-            <select id="subnet" class="border p-2 w-full text-center mb-2">
+    <div id="settings-panel" class="fixed top-0 right-0 h-full glassmorphism z-40 transition-all duration-300 w-64 overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-white mb-4 relative">
+                Settings
+                <span class="absolute bottom-0 left-0 w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-500"></span>
+            </h2>
+            <select id="subnet" class="border border-gray-300/20 bg-gray-700 text-white p-2 w-full rounded-md text-center mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Select subnet</option>
                 <option value="10.0.3.0">10.0.3.0</option>
                 <option value="192.168.1.0">192.168.1.0</option>
                 <option value="192.168.0.0">192.168.0.0</option>
                 <option value="172.16.0.0">172.16.0.0</option>
             </select>
-            <input type="text" id="subnetInput" placeholder="e.g., 10.0.4.0" class="border p-2 w-full text-center mb-2">
-            <select id="ipAddress" class="border p-2 w-full text-center mb-2 hidden">
+            <input type="text" id="subnetInput" placeholder="e.g., 10.0.4.0" class="border border-gray-300/20 bg-gray-700 text-white p-2 w-full rounded-md text-center mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select id="ipAddress" class="border border-gray-300/20 bg-gray-700 text-white p-2 w-full rounded-md text-center mb-3 hidden focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Select IP address</option>
             </select>
-            <button id="changeSubnet" class="bg-gray-500 text-white p-2 rounded w-full mb-2 hidden">Change Subnet</button>
-            <button id="discover" class="bg-green-500 text-white p-2 rounded w-full mb-2">Discover TVs</button>
-            <input type="text" id="manualIP" placeholder="e.g., 10.0.3.100" class="border p-2 w-full text-center mb-2">
-            <button id="setIP" class="bg-blue-500 text-white p-2 rounded w-full mb-2">Set IP</button>
+            <button id="changeSubnet" class="bg-gray-600 text-white p-2 rounded-md w-full mb-3 hover:bg-gray-700 hidden transition">Change Subnet</button>
+            <button id="discover" class="bg-green-500 text-white p-2 rounded-md w-full mb-3 hover:bg-green-600 transition">Discover TVs</button>
+            <input type="text" id="manualIP" placeholder="e.g., 10.0.3.100" class="border border-gray-300/20 bg-gray-700 text-white p-2 w-full rounded-md text-center mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="setIP" class="bg-blue-500 text-white p-2 rounded-md w-full mb-3 hover:bg-blue-600 transition">Set IP</button>
         </div>
     </div>
-    <div class="max-w-lg mx-auto p-4 bg-white shadow-md mt-16">
-        <h1 class="text-2xl font-bold mb-4 text-center">Roku TV Control</h1>
-        <p class="mb-4 text-center">Use the settings panel (top-right) to select or enter a subnet, discover TCL Roku TVs, and set the IP. Use the buttons or arrow keys/Enter to control the TV.</p>
-        <p id="status" class="text-center mb-4"></p>
-        <div id="remote" class="space-y-4">
-            <div class="function-buttons flex justify-center space-x-2"></div>
-            <div class="navigation flex flex-col items-center space-y-2">
-                <div class="up"></div>
-                <div class="middle-nav flex space-x-2">
+    <div class="max-w-lg mx-auto p-6 glassmorphism rounded-xl mt-16 md:mt-20">
+        <h1 class="text-3xl font-bold text-white mb-4 text-center">Roku TV Control</h1>
+        <p class="mb-6 text-gray-300 text-center">Use the settings panel (top-right) to configure your TCL Roku TV. Control with buttons or keyboard (arrow keys, Enter, =, -).</p>
+        <p id="status" class="text-gray-200 text-center mb-6 p-2 bg-gray-700/50 rounded-md transition-opacity fade-in"></p>
+        <div id="remote" class="space-y-6">
+            <div class="function-buttons flex justify-center gap-4">
+                <!-- Buttons added via JS -->
+            </div>
+            <div class="navigation flex flex-col items-center space-y-3">
+                <div class="up flex justify-center"></div>
+                <div class="middle-nav flex justify-center gap-3 w-36">
                     <div class="left"></div>
                     <div class="select"></div>
                     <div class="right"></div>
                 </div>
-                <div class="down"></div>
+                <div class="down flex justify-center"></div>
             </div>
-            <div class="media-controls flex justify-center space-x-2"></div>
-            <div class="volume-controls flex justify-center space-x-2"></div>
-            <div class="power-controls flex justify-center space-x-2"></div>
-            <div class="other-controls flex justify-center space-x-2"></div>
+            <div class="media-controls flex justify-center gap-3 w-36 mx-auto"></div>
+            <div class="volume-controls flex justify-center gap-3 w-36 mx-auto"></div>
+            <div class="power-controls flex justify-center gap-3 w-24 mx-auto"></div>
+            <div class="other-controls flex justify-center gap-3 w-24 mx-auto"></div>
         </div>
     </div>
     <script>
@@ -63,6 +98,8 @@
             panel.classList.toggle('w-64', settingsVisible);
             panel.classList.toggle('w-0', !settingsVisible);
             document.getElementById('status').textContent = settingsVisible ? 'Settings panel expanded.' : 'Settings panel collapsed.';
+            document.getElementById('status').classList.add('fade-in');
+            setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
         }
 
         document.getElementById('settingsToggle').addEventListener('click', toggleSettings);
@@ -73,18 +110,24 @@
             rokuIP = manualIP || select.value;
             if (rokuIP) {
                 document.getElementById('status').textContent = 'IP set to ' + rokuIP;
+                document.getElementById('status').classList.add('fade-in');
                 document.getElementById('manualIP').value = rokuIP;
                 settingsVisible = false;
                 document.getElementById('settings-panel').classList.remove('w-64');
                 document.getElementById('settings-panel').classList.add('w-0');
+                setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
             } else {
                 document.getElementById('status').textContent = 'Please select or enter an IP address.';
+                document.getElementById('status').classList.add('fade-in');
+                setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
             }
         });
 
         function sendKeypress(key) {
             if (!rokuIP) {
                 document.getElementById('status').textContent = 'Please set the IP address first.';
+                document.getElementById('status').classList.add('fade-in');
+                setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                 return;
             }
             const url = `http://${rokuIP}:8060/keypress/${key}`;
@@ -92,6 +135,8 @@
                 .then(response => {
                     if (response.ok) {
                         document.getElementById('status').textContent = `Sent ${key} to Roku TV`;
+                        document.getElementById('status').classList.add('fade-in');
+                        setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                     }
                 })
                 .catch(error => {
@@ -99,39 +144,51 @@
                 });
         }
 
-        const createButton = (parent, key, label = key) => {
+        const createButton = (parent, key, iconClass, label) => {
             const button = document.createElement('button');
-            button.className = 'bg-gray-300 p-2 rounded hover:bg-gray-400';
-            button.textContent = label;
+            button.className = 'neumorphic-btn text-white p-3 rounded-lg w-12 h-12 flex items-center justify-center hover:scale-110 transition transform focus:outline-none';
+            button.innerHTML = `<i class="${iconClass}"></i>`;
+            button.title = label;
+            button.setAttribute('aria-label', label);
             button.onclick = () => sendKeypress(key);
             parent.appendChild(button);
         };
 
         const functionDiv = document.querySelector('.function-buttons');
-        ['Home', 'Back', 'Info', 'Settings'].forEach(key => createButton(functionDiv, key));
-        createButton(document.querySelector('.up'), 'Up');
-        createButton(document.querySelector('.left'), 'Left');
-        createButton(document.querySelector('.select'), 'Select');
-        createButton(document.querySelector('.right'), 'Right');
-        createButton(document.querySelector('.down'), 'Down');
+        createButton(functionDiv, 'Home', 'fas fa-home', 'Home');
+        createButton(functionDiv, 'Back', 'fas fa-undo', 'Back');
+        createButton(functionDiv, 'Info', 'fas fa-info-circle', 'Info');
+        createButton(functionDiv, 'Settings', 'fas fa-cog', 'Settings');
+
+        createButton(document.querySelector('.up'), 'Up', 'fas fa-arrow-up', 'Up');
+        createButton(document.querySelector('.left'), 'Left', 'fas fa-arrow-left', 'Left');
+        createButton(document.querySelector('.select'), 'Select', 'fas fa-circle', 'Select');
+        createButton(document.querySelector('.right'), 'Right', 'fas fa-arrow-right', 'Right');
+        createButton(document.querySelector('.down'), 'Down', 'fas fa-arrow-down', 'Down');
+
         const mediaDiv = document.querySelector('.media-controls');
-        createButton(mediaDiv, 'Rewind');
-        createButton(mediaDiv, 'Play', 'Play/Pause');
-        createButton(mediaDiv, 'FastFwd', 'Fast Forward');
+        createButton(mediaDiv, 'Rewind', 'fas fa-fast-backward', 'Rewind');
+        createButton(mediaDiv, 'Play', 'fas fa-play', 'Play/Pause');
+        createButton(mediaDiv, 'FastFwd', 'fas fa-fast-forward', 'Fast Forward');
+
         const volumeDiv = document.querySelector('.volume-controls');
-        createButton(volumeDiv, 'VolumeDown', 'Volume Down');
-        createButton(volumeDiv, 'VolumeMute', 'Mute');
-        createButton(volumeDiv, 'VolumeUp', 'Volume Up');
+        createButton(volumeDiv, 'VolumeDown', 'fas fa-volume-down', 'Volume Down');
+        createButton(volumeDiv, 'VolumeMute', 'fas fa-volume-mute', 'Mute');
+        createButton(volumeDiv, 'VolumeUp', 'fas fa-volume-up', 'Volume Up');
+
         const powerDiv = document.querySelector('.power-controls');
-        createButton(powerDiv, 'PowerOn', 'Power On');
-        createButton(powerDiv, 'PowerOff', 'Power Off');
+        createButton(powerDiv, 'PowerOn', 'fas fa-power-off text-green-400', 'Power On');
+        createButton(powerDiv, 'PowerOff', 'fas fa-power-off text-red-400', 'Power Off');
+
         const otherDiv = document.querySelector('.other-controls');
-        createButton(otherDiv, 'FindRemote', 'Find Remote');
-        createButton(otherDiv, 'InputTuner', 'Input');
+        createButton(otherDiv, 'FindRemote', 'fas fa-signal', 'Find Remote');
+        createButton(otherDiv, 'InputTuner', 'fas fa-tv', 'Input');
 
         document.addEventListener('keydown', function(event) {
             if (!rokuIP) {
                 document.getElementById('status').textContent = 'Please set the IP address first.';
+                document.getElementById('status').classList.add('fade-in');
+                setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                 return;
             }
             let key = '';
@@ -159,16 +216,21 @@
 
             if (!subnet) {
                 status.textContent = 'Please select or enter a subnet.';
+                status.classList.add('fade-in');
+                setTimeout(() => status.classList.remove('fade-in'), 500);
                 return;
             }
 
             const subnetRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.0$/;
             if (!subnetRegex.test(subnet)) {
                 status.textContent = 'Invalid subnet format. Use e.g., 10.0.3.0';
+                status.classList.add('fade-in');
+                setTimeout(() => status.classList.remove('fade-in'), 500);
                 return;
             }
 
             status.textContent = `Discovering TCL Roku TVs on ${subnet}...`;
+            status.classList.add('fade-in');
             localStorage.removeItem('rokuDevices');
 
             try {
@@ -188,12 +250,16 @@
                 ipSelect.classList.remove('hidden');
                 changeSubnetButton.classList.remove('hidden');
                 await populateDevices(devices);
+                status.classList.add('fade-in');
+                setTimeout(() => status.classList.remove('fade-in'), 500);
             } catch (error) {
                 if (error.message.includes('Address already in use')) {
                     status.textContent = 'Discovery error: Port conflict detected. Try closing other apps using port 1900 (e.g., UPnP services) or enter IP manually.';
                 } else {
                     status.textContent = `Discovery error: ${error.message}. Check if multicast is blocked or enter IP manually.`;
                 }
+                status.classList.add('fade-in');
+                setTimeout(() => status.classList.remove('fade-in'), 500);
             }
         }
 
@@ -209,6 +275,8 @@
                     select.appendChild(option);
                 });
                 document.getElementById('status').textContent = 'Devices loaded. Select an IP.';
+                document.getElementById('status').classList.add('fade-in');
+                setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                 select.addEventListener('change', function() {
                     if (select.value) {
                         manualIP.value = select.value;
@@ -216,6 +284,8 @@
                 }, { once: true });
             } else {
                 document.getElementById('status').textContent = 'No TCL Roku TVs found. Check network settings or enter IP manually.';
+                document.getElementById('status').classList.add('fade-in');
+                setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
             }
         }
 
@@ -235,6 +305,8 @@
                     localStorage.setItem('rokuDevices', JSON.stringify(devices));
                 } catch (error) {
                     document.getElementById('status').textContent = `Error loading devices: ${error.message}. Select or enter a subnet and click Discover TVs to scan.`;
+                    document.getElementById('status').classList.add('fade-in');
+                    setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
                     return;
                 }
             }
@@ -259,6 +331,8 @@
             ipSelect.classList.add('hidden');
             changeSubnetButton.classList.add('hidden');
             document.getElementById('status').textContent = 'Select or enter a subnet to scan again.';
+            document.getElementById('status').classList.add('fade-in');
+            setTimeout(() => document.getElementById('status').classList.remove('fade-in'), 500);
         });
 
         window.addEventListener('load', loadDevices);
