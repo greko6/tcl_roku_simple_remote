@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roku TV Control</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <button id="settingsToggle" class="fixed top-4 right-4 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 focus:outline-none z-50" title="Toggle Settings">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+    <div id="settings-panel" class="fixed top-0 right-0 h-full bg-white shadow-lg z-40 transition-all duration-300 w-64 overflow-y-auto">
+        <div class="p-4">
+            <h2 class="text-lg font-semibold mb-4">Settings</h2>
+            <select id="subnet" class="border p-2 w-full text-center mb-2">
+                <option value="">Select subnet</option>
+                <option value="10.0.3.0">10.0.3.0</option>
+                <option value="192.168.1.0">192.168.1.0</option>
+                <option value="192.168.0.0">192.168.0.0</option>
+                <option value="172.16.0.0">172.16.0.0</option>
+            </select>
+            <input type="text" id="subnetInput" placeholder="e.g., 10.0.4.0" class="border p-2 w-full text-center mb-2">
+            <select id="ipAddress" class="border p-2 w-full text-center mb-2 hidden">
+                <option value="">Select IP address</option>
+            </select>
+            <button id="changeSubnet" class="bg-gray-500 text-white p-2 rounded w-full mb-2 hidden">Change Subnet</button>
+            <button id="discover" class="bg-green-500 text-white p-2 rounded w-full mb-2">Discover TVs</button>
+            <input type="text" id="manualIP" placeholder="e.g., 10.0.3.100" class="border p-2 w-full text-center mb-2">
+            <button id="setIP" class="bg-blue-500 text-white p-2 rounded w-full mb-2">Set IP</button>
+        </div>
+    </div>
+    <div class="max-w-lg mx-auto p-4 bg-white shadow-md mt-16">
+        <h1 class="text-2xl font-bold mb-4 text-center">Roku TV Control</h1>
+        <p class="mb-4 text-center">Use the settings panel (top-right) to select or enter a subnet, discover TCL Roku TVs, and set the IP. Use the buttons or arrow keys/Enter to control the TV.</p>
+        <p id="status" class="text-center mb-4"></p>
+        <div id="remote" class="space-y-4">
+            <div class="function-buttons flex justify-center space-x-2"></div>
+            <div class="navigation flex flex-col items-center space-y-2">
+                <div class="up"></div>
+                <div class="middle-nav flex space-x-2">
+                    <div class="left"></div>
+                    <div class="select"></div>
+                    <div class="right"></div>
+                </div>
+                <div class="down"></div>
+            </div>
+            <div class="media-controls flex justify-center space-x-2"></div>
+            <div class="volume-controls flex justify-center space-x-2"></div>
+            <div class="power-controls flex justify-center space-x-2"></div>
+            <div class="other-controls flex justify-center space-x-2"></div>
+        </div>
+    </div>
+    <script>
+        let rokuIP = '';
+        let settingsVisible = true;
+
+        function toggleSettings() {
+            settingsVisible = !settingsVisible;
+            const panel = document.getElementById('settings-panel');
+            panel.classList.toggle('w-64', settingsVisible);
+            panel.classList.toggle('w-0', !settingsVisible);
+            document.getElementById('status').textContent = settingsVisible ? 'Settings panel expanded.' : 'Settings panel collapsed.';
+        }
+
+        document.getElementById('settingsToggle').addEventListener('click', toggleSettings);
+
+        document.getElementById('setIP').addEventListener('click', function() {
+            const select = document.getElementById('ipAddress');
+            const manualIP = document.getElementById('manualIP').value;
+            rokuIP = manualIP || select.value;
+            if (rokuIP) {
+                document.getElementById('status').textContent = 'IP set to ' + rokuIP;
+                document.getElementById('manualIP').value = rokuIP;
+                settingsVisible = false;
+                document.getElementById('settings-panel').classList.remove('w-64');
+                document.getElementById('settings-panel').classList.add('w-0');
+            } else {
+                document.getElementById('status').textContent = 'Please select or enter an IP address.';
+            }
+        });
+
+        function sendKeypress(key) {
+            if (!rokuIP) {
+                document.getElementById('status').textContent = 'Please set the IP address first.';
+                return;
+            }
+            const url = `http://${rokuIP}:8060/keypress/${key}`;
+            fetch(url, { method: 'POST' })
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById('status').textContent = `Sent ${key} to Roku TV`;
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error sending ${key}:`, error);
+                });
+        }
+
+        const createButton = (parent, key, label = key) => {
+            const button = document.createElement('button');
+            button.className = 'bg-gray-300 p-2 rounded hover:bg-gray-400';
+            button.textContent = label;
+            button.onclick = () => sendKeypress(key);
+            parent.appendChild(button);
+        };
+
+        const functionDiv = document.querySelector('.function-buttons');
+        ['Home', 'Back', 'Info', 'Settings'].forEach(key => createButton(functionDiv, key));
+        createButton(document.querySelector('.up'), 'Up');
+        createButton(document.querySelector('.left'), 'Left');
+        createButton(document.querySelector('.select'), 'Select');
+        createButton(document.querySelector('.right'), 'Right');
+        createButton(document.querySelector('.down'), 'Down');
+        const mediaDiv = document.querySelector('.media-controls');
+        createButton(mediaDiv, 'Rewind');
+        createButton(mediaDiv, 'Play', 'Play/Pause');
+        createButton(mediaDiv, 'FastFwd', 'Fast Forward');
+        const volumeDiv = document.querySelector('.volume-controls');
+        createButton(volumeDiv, 'VolumeDown', 'Volume Down');
+        createButton(volumeDiv, 'VolumeMute', 'Mute');
+        createButton(volumeDiv, 'VolumeUp', 'Volume Up');
+        const powerDiv = document.querySelector('.power-controls');
+        createButton(powerDiv, 'PowerOn', 'Power On');
+        createButton(powerDiv, 'PowerOff', 'Power Off');
+        const otherDiv = document.querySelector('.other-controls');
+        createButton(otherDiv, 'FindRemote', 'Find Remote');
+        createButton(otherDiv, 'InputTuner', 'Input');
+
+        document.addEventListener('keydown', function(event) {
+            if (!rokuIP) {
+                document.getElementById('status').textContent = 'Please set the IP address first.';
+                return;
+            }
+            let key = '';
+            switch (event.key) {
+                case 'ArrowUp': key = 'Up'; break;
+                case 'ArrowDown': key = 'Down'; break;
+                case 'ArrowLeft': key = 'Left'; break;
+                case 'ArrowRight': key = 'Right'; break;
+                case 'Enter': key = 'Select'; break;
+                case '=': key = 'VolumeUp'; break;
+                case '-': key = 'VolumeDown'; break;
+                case 'Backspace': key = 'Back'; break;
+                default: return;
+            }
+            sendKeypress(key);
+        });
+
+        async function discoverDevices() {
+            const status = document.getElementById('status');
+            const subnetSelect = document.getElementById('subnet');
+            const subnetInput = document.getElementById('subnetInput');
+            const ipSelect = document.getElementById('ipAddress');
+            const changeSubnetButton = document.getElementById('changeSubnet');
+            let subnet = subnetInput.value || subnetSelect.value;
+
+            if (!subnet) {
+                status.textContent = 'Please select or enter a subnet.';
+                return;
+            }
+
+            const subnetRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.0$/;
+            if (!subnetRegex.test(subnet)) {
+                status.textContent = 'Invalid subnet format. Use e.g., 10.0.3.0';
+                return;
+            }
+
+            status.textContent = `Discovering TCL Roku TVs on ${subnet}...`;
+            localStorage.removeItem('rokuDevices');
+
+            try {
+                const response = await fetch('/discover', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subnet }),
+                    signal: AbortSignal.timeout(20000)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error: status ${response.status}`);
+                }
+                const devices = await response.json();
+                localStorage.setItem('rokuDevices', JSON.stringify(devices));
+                subnetSelect.classList.add('hidden');
+                subnetInput.classList.add('hidden');
+                ipSelect.classList.remove('hidden');
+                changeSubnetButton.classList.remove('hidden');
+                await populateDevices(devices);
+            } catch (error) {
+                if (error.message.includes('Address already in use')) {
+                    status.textContent = 'Discovery error: Port conflict detected. Try closing other apps using port 1900 (e.g., UPnP services) or enter IP manually.';
+                } else {
+                    status.textContent = `Discovery error: ${error.message}. Check if multicast is blocked or enter IP manually.`;
+                }
+            }
+        }
+
+        async function populateDevices(devices) {
+            const select = document.getElementById('ipAddress');
+            const manualIP = document.getElementById('manualIP');
+            select.innerHTML = '<option value="">Select IP address</option>';
+            if (devices.length > 0) {
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.ip;
+                    option.textContent = device.name;
+                    select.appendChild(option);
+                });
+                document.getElementById('status').textContent = 'Devices loaded. Select an IP.';
+                select.addEventListener('change', function() {
+                    if (select.value) {
+                        manualIP.value = select.value;
+                    }
+                }, { once: true });
+            } else {
+                document.getElementById('status').textContent = 'No TCL Roku TVs found. Check network settings or enter IP manually.';
+            }
+        }
+
+        async function loadDevices() {
+            const subnetSelect = document.getElementById('subnet');
+            const subnetInput = document.getElementById('subnetInput');
+            const ipSelect = document.getElementById('ipAddress');
+            const changeSubnetButton = document.getElementById('changeSubnet');
+            let devices = JSON.parse(localStorage.getItem('rokuDevices') || '[]');
+            if (devices.length === 0) {
+                try {
+                    const response = await fetch('/devices', { signal: AbortSignal.timeout(5000) });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error: status ${response.status}`);
+                    }
+                    devices = await response.json();
+                    localStorage.setItem('rokuDevices', JSON.stringify(devices));
+                } catch (error) {
+                    document.getElementById('status').textContent = `Error loading devices: ${error.message}. Select or enter a subnet and click Discover TVs to scan.`;
+                    return;
+                }
+            }
+            if (devices.length > 0) {
+                subnetSelect.classList.add('hidden');
+                subnetInput.classList.add('hidden');
+                ipSelect.classList.remove('hidden');
+                changeSubnetButton.classList.remove('hidden');
+            }
+            await populateDevices(devices);
+        }
+
+        document.getElementById('discover').addEventListener('click', discoverDevices);
+
+        document.getElementById('changeSubnet').addEventListener('click', function() {
+            const subnetSelect = document.getElementById('subnet');
+            const subnetInput = document.getElementById('subnetInput');
+            const ipSelect = document.getElementById('ipAddress');
+            const changeSubnetButton = document.getElementById('changeSubnet');
+            subnetSelect.classList.remove('hidden');
+            subnetInput.classList.remove('hidden');
+            ipSelect.classList.add('hidden');
+            changeSubnetButton.classList.add('hidden');
+            document.getElementById('status').textContent = 'Select or enter a subnet to scan again.';
+        });
+
+        window.addEventListener('load', loadDevices);
+
+        setInterval(async () => {
+            try {
+                const response = await fetch('/devices', { signal: AbortSignal.timeout(5000) });
+                if (!response.ok) return;
+                const devices = await response.json();
+                localStorage.setItem('rokuDevices', JSON.stringify(devices));
+                if (devices.length > 0) {
+                    document.getElementById('subnet').classList.add('hidden');
+                    document.getElementById('subnetInput').classList.add('hidden');
+                    document.getElementById('ipAddress').classList.remove('hidden');
+                    document.getElementById('changeSubnet').classList.remove('hidden');
+                }
+                await populateDevices(devices);
+            } catch (error) {
+                console.error('Error polling devices:', error);
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
